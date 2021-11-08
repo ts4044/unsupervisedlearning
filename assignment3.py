@@ -5,23 +5,45 @@ import numpy as np
 
 class KNN:
 	def __init__(self, k):
-		#KNN state here
-		#Feel free to add methods
+		# KNN state here
+		# Feel free to add methods
 		self.k = k
 
 	def distance(self, featureA, featureB):
-		diffs = (featureA - featureB)**2
+		diffs = (featureA - featureB) ** 2
 		return np.sqrt(diffs.sum())
 
 	def train(self, X, y):
-		#training logic here
-		#input is an array of features and labels
-		None
+		# training logic here
+		# input is an array of features and labels
+		self.features = X
+		self.labels = y
 
 	def predict(self, X):
-		#Run model here
-		#Return array of predictions where there is one prediction for each set of features
-		return None
+		# Run model here
+		predictions = []
+
+		for predict in X:
+			# Find the Euclidian distance with each of the rows in features and form an array
+			neighbours = [self.distance(predict, row) for row in self.features]
+
+			# Sort the array and obtain the index of the top 'k' neighbours
+			k_sorted_neighbours = np.argsort(neighbours)[:self.k]
+
+			# Based on the indexes of the top k neighbours, get their labels
+			k_neighbours_labels = [self.labels[i] for i in k_sorted_neighbours]
+
+			# Count the labels
+			k_nearest_neighbours, count = np.unique(k_neighbours_labels, return_counts=True)
+
+			# Get the index of the label that has the maximum count
+			index_of_mode = np.argmax(count)
+
+			# Add the predicted label to the result list
+			predictions.append(k_nearest_neighbours[index_of_mode])
+
+		# Return array of predictions where there is one prediction for each set of features
+		return np.array(predictions)
 
 
 class Perceptron:
