@@ -146,6 +146,9 @@ class ID3:
 		# Else If All examples have the same classification, return the classification
 		elif len(np.unique(labels)) == 1:
 			return labels[0]
+		# Else If there are no more columns to process, then return the most common label for the data set
+		elif len(columns_to_process) == 0:
+			return self.get_mode(labels)
 
 		# Else
 		# A ← argmax(a ∈ attributes) IMPORTANCE(a, examples)
@@ -169,11 +172,12 @@ class ID3:
 
 		for bin_value in bins:
 			# Create the subset of features for each bin. Obtain the corresponding labels.
-			instance_subset = instances[best_column_values == bin_value]
-			label_subset = labels[best_column_values == bin_value]
+			indexes = [i for i in range(len(best_column_values)) if best_column_values[i] == bin_value]
+			instance_subset = [instances[i] for i in indexes]
+			label_subset = [labels[i] for i in indexes]
 
 			# subtree ← DECISION-TREE-LEARNING(exs, attributes − A, examples)
-			subtree = self.decision_tree_learning(instance_subset, label_subset, columns_to_process, best_column_values)
+			subtree = self.decision_tree_learning(instance_subset, label_subset, columns_to_process, labels)
 			# Add a branch to tree with label (A = vk) and subtree subtree
 			tree[best_column][bin_value] = subtree
 
