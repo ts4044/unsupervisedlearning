@@ -105,9 +105,7 @@ class ID3:
 		# Feel free to add methods
 		self.bin_size = nbins
 		self.range = data_range
-		self.tree = {}
-		self.features = None
-		self.labels = None
+		self.tree = None
 
 	def preprocess(self, data):
 		# Our dataset only has continuous data
@@ -115,69 +113,94 @@ class ID3:
 		categorical_data = np.floor(self.bin_size * norm_data).astype(int)
 		return categorical_data
 
-	def calculate_entropy(self, row_ids):
-		labels = [self.labels[i] for i in row_ids]
+	def calculate_entropy(self, labels):
 		total_count = len(labels)
 		unique_labels, counts = np.unique(labels, return_counts=True)
 		entropy = sum([(-(c / total_count) * math.log2(c / total_count)) if c > 0 else 0 for c in counts])
 		return entropy
 
-	def calculate_information_gain(self, row_ids, column):
-		feature_list = [self.features[i][column] for i in row_ids]
-		unique_bins, counts = np.unique(feature_list, return_counts=True)
+	def calculate_information_gain(self, features, column, labels):
+		column_values = [features[i][column] for i in range(len(features))]
+
+		unique_bins, counts = np.unique(column_values, return_counts=True)
 		total_count = sum(counts)
+
 		bin_entropies = []
-
 		for x in unique_bins:
-			indexes = np.where(feature_list == x)[0]
-			bin_entropies.append(self.calculate_entropy(indexes))
+			indexes = np.where(column_values == x)[0]
+			corresponding_labels = [labels[i] for i in indexes]
+			bin_entropy = self.calculate_entropy(corresponding_labels)
+			bin_entropies.append(bin_entropy)
 
-		info_gain = sum([(counts[i] / total_count) * bin_entropies[i] for i in range(len(unique_bins))])
+		info_gain = sum([((counts[i] / total_count) * bin_entropies[i]) for i in range(len(bin_entropies))])
 		return info_gain
 
-	def decision_tree_learning(self, feature_ids):
-		if len(feature_ids) == 0:
-			return None
+	def get_best_gain_column(self, features, labels, columns_to_process):
+		total_entropy = self.calculate_entropy(labels)
+		gain = {}
+		for column in columns_to_process:
+			gain[column] = total_entropy - self.calculate_information_gain(features, column, labels)
+		return max(gain, key=gain.get)
 
-		feature_list = [self.features[i] for i in feature_ids]
-		label_list = [self.labels[i] for i in feature_ids]
-		if len(np.unique(label_list)) == 1:
-			print({"value": label_list[0]})
+	def get_mode(self, values):
+		bins, counts = np.unique(values, return_counts=True)
+		return bins[np.argmax(counts)]
 
-		total_entropy = self.calculate_entropy(feature_ids)
+	def decision_tree_learning(self, features, labels, columns_to_process, parent_examples=None):
+		if len(features) == 0:
+			return self.get_mode(parent_examples)
+		elif len(np.unique(labels)) == 1:
+			return labels[0]
 
-		gain = []
-		for index in range(len(self.features[0])):
-			gain.append(total_entropy - self.calculate_information_gain(feature_ids, index))
+		# Else
+		best_column = self.get_best_gain_column(features, labels, columns_to_process)
+		columns_to_process.remove(best_column)
+		tree = {best_column: {}}
 
-		sorted_gain = np.argsort(gain)
-		best_feature_column = sorted_gain[-1]
-		best_feature_values = [self.features[i][best_feature_column] for i in feature_ids]
-		bins = np.unique(best_feature_values)
+		best_column_values = [feature[best_column] for feature in features]
+		bins = np.unique(best_column_values)
 
 		if len(bins) == 1:
-			unique_labels, label_counts = np.unique(label_list, return_counts=True)
-			label_mode = unique_labels[label_counts == label_counts.max()]
-			print({"value": label_mode})
+			return self.get_mode(labels)
 
 		for bin_value in bins:
-			print(np.where(feature_list == bin_value)[0])
-			print(bin_value)
+			feature_subset = features[best_column_values == bin_value]
+			label_subset = labels[best_column_values == bin_value]
+			subtree = self.decision_tree_learning(feature_subset, label_subset, columns_to_process, best_column_values)
+			tree[best_column][bin_value] = subtree
+
+		return tree
 
 	def train(self, X, y):
 		# training logic here
 		# input is array of features and labels
 		categorical_data = self.preprocess(X)
-		self.features = categorical_data
-		self.labels = y
-		self.decision_tree_learning(range(len(categorical_data)))
+		self.tree = self.decision_tree_learning(categorical_data, y, list(range(len(categorical_data[0]))))
+		print(self.tree)
 
 	def predict(self, X):
 		# Run model here
 		# Return array of predictions where there is one prediction for each set of features
 		categorical_data = self.preprocess(X)
-		return None
 
+		predictions = []
+
+		for data in categorical_data:
+			model = self.tree
+			while 1:
+				if not isinstance(model, dict):
+					predictions.append(model)
+					break
+				else:
+					node = next(iter(model))
+					value = data[node]
+					if value in model[node]:
+						model = model[node][value]
+					else:
+						predictions.append(None)
+						break
+
+		return np.array(predictions)
 
 ### Assignment 4 ###
 
