@@ -135,9 +135,9 @@ class ID3:
 
 	# This is the main function of the algorithm training.
 	# We recursively calculate the nodes and append to tree
-	# Features is the set of datapoints that we are processing, labels are their corresponding subset from the y
+	# instances is the list of datapoints that we are processing, labels are their corresponding subset from the y
 	# columns_to_process maintains the columns that have not yet been visited
-	# parent_examples holds the values of the previously selected best column from the parent subset
+	# parent_examples holds the parent node's label list
 	def decision_tree_learning(self, instances, labels, columns_to_process, parent_examples=None):
 		# If the examples is empty, return the PLURALITY_VALUES(parent_examples)
 		# Parent_Examples are values of the best gain column on which we have split
@@ -189,6 +189,7 @@ class ID3:
 		categorical_data = self.preprocess(X)
 
 		self.tree = self.decision_tree_learning(categorical_data, y, list(range(categorical_data.shape[1])))
+		print(self.tree)
 
 	def predict(self, X):
 		# Run model here
